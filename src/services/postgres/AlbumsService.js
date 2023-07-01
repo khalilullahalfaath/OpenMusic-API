@@ -1,7 +1,7 @@
 const { nanoid } = require('nanoid');
 const { Pool } = require('pg');
 const InvariantError = require('../../exceptions/InvariantError');
-const { mapAlbumDBToModel } = require('../../utils');
+const { mapAlbumDBToModel, mapSongAlbumIdDBToModel } = require('../../utils');
 const NotFoundError = require('../../exceptions/NotFoundError');
 
 class AlbumService {
@@ -29,18 +29,31 @@ class AlbumService {
   }
 
   async getAlbumById(id) {
-    const query = {
+    const queryGetAlbum = {
       text: 'SELECT * from albums WHERE id = $1',
       values: [id],
     };
 
-    const result = await this._pool.query(query);
+    const result = await this._pool.query(queryGetAlbum);
 
     if (!result.rows.length) {
       throw new NotFoundError('Album tidak ditemukan');
     }
 
-    return result.rows.map(mapAlbumDBToModel);
+    const albumData = result.rows[0];
+    const album = mapAlbumDBToModel(albumData);
+
+    const queryGetSongsByAlbumId = {
+      text: 'SELECT * from songs WHERE album_id = $1',
+      values: [id],
+    };
+
+    const songsResult = await this._pool.query(queryGetSongsByAlbumId);
+    const songs = songsResult.rows.map(mapSongAlbumIdDBToModel);
+
+    album.songs = songs;
+
+    return album;
   }
 
   async editAlbumById(id, { name, year }) {
@@ -58,7 +71,7 @@ class AlbumService {
 
   async deleteAlbumById(id) {
     const query = {
-      text: 'DELETE FROM alums WHERE id = $1 RETURNING id',
+      text: 'DELETE FROM albums WHERE id = $1 RETURNING id',
       values: [id],
     };
 

@@ -30,8 +30,25 @@ class SongService {
     return result.rows[0].id;
   }
 
-  async getSongs() {
-    const result = await this._pool.query('SELECT * FROM songs');
+  async getSongs(title, performer) {
+    let query = 'SELECT id, title, performer FROM songs WHERE 1=1';
+    const params = [];
+
+    if (title) {
+      query += ' AND title ILIKE $1';
+      params.push(`%${title}%`);
+    }
+
+    if (performer) {
+      if (params.length === 0) {
+        query += ' AND performer ILIKE $1';
+      } else {
+        query += ' AND performer ILIKE $2';
+      }
+      params.push(`%${performer}%`);
+    }
+
+    const result = await this._pool.query(query, params);
     return result.rows.map(mapSongDBToModel);
   }
 
@@ -47,7 +64,7 @@ class SongService {
       throw new NotFoundError('Song tidak ditemukan');
     }
 
-    return result.rows.map(mapSongDBToModel);
+    return result.rows.map(mapSongDBToModel)[0];
   }
 
   async editSongById(id, {
@@ -55,11 +72,12 @@ class SongService {
   }) {
     const updatedAt = new Date().toISOString();
     const query = {
-      text: 'UPDATE songs SET title = $1, year = $2, genre = $3, performer= $4, duration= $5, albumId=$6, updated_at = $7 WHERE id = $8 RETURNING id',
+      text: 'UPDATE songs SET title = $1, year = $2, genre = $3, performer = $4, duration = $5, album_id = $6, updated_at = $7 WHERE id = $8 RETURNING id',
       values: [title, year, genre, performer, duration, albumId, updatedAt, id],
     };
 
     const result = await this._pool.query(query);
+
     if (!result.rows.length) {
       throw new NotFoundError('Gagal memperbarui Song. Id tidak ditemukan');
     }
@@ -67,7 +85,7 @@ class SongService {
 
   async deleteSongById(id) {
     const query = {
-      text: 'DELETE FROM alums WHERE id = $1 RETURNING id',
+      text: 'DELETE FROM songs WHERE id = $1 RETURNING id',
       values: [id],
     };
 

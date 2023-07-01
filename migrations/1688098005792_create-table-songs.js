@@ -29,7 +29,6 @@ exports.up = (pgm) => {
       type: 'VARCHAR(50)',
       references: '"albums"',
       onDelete: 'cascade',
-      referencesConstraintName: 'songs_fk',
     },
     created_at: {
       type: 'TEXT',
@@ -41,7 +40,7 @@ exports.up = (pgm) => {
       notNull: true,
     },
   });
-  pgm.addConstraint('songs', 'songs_fk', {
+  pgm.addConstraint('songs', 'songs_album_id_fk', {
     foreignKeys: {
       columns: 'album_id',
       references: 'albums',
@@ -50,5 +49,6 @@ exports.up = (pgm) => {
 };
 
 exports.down = (pgm) => {
+  pgm.dropConstraint('songs', 'songs_album_id_fk');
   pgm.dropTable('songs');
 };
