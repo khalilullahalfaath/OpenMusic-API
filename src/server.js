@@ -80,6 +80,8 @@ const init = async () => {
         message: 'terjadi kegagalan pada server kami',
       });
       newResponse.code(500);
+      // eslint-disable-next-line no-console
+      console.log(newResponse);
       return newResponse;
     }
     return h.continue;
