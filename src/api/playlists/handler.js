@@ -11,10 +11,11 @@ class PlaylistsHandler {
   async postPlaylistHandler(request, h) {
     this._validator.validatePostPlaylistPayload(request.payload);
 
+    const { name } = request.payload;
     const { id: credentialId } = request.auth.credentials;
 
     const playlistId = await this._service.addPlaylist({
-      ...request.payload,
+      name,
       owner: credentialId,
     });
 
@@ -56,12 +57,14 @@ class PlaylistsHandler {
 
   async postSongToPlaylistHandler(request, h) {
     this._validator.validatePostSongPlaylistPayload(request.payload);
+    const { songId } = request.payload;
 
-    const { playlistId } = request.params;
+    const { id: playlistId } = request.params;
     const { id: credentialId } = request.auth.credentials;
 
+    await this._service.verifySongId(songId);
     await this._service.verifyPlaylistAccess(playlistId, credentialId);
-    await this._service.addSongToPlaylist(playlistId, request.payload);
+    await this._service.addSongToPlaylist(playlistId, songId);
 
     const response = h.response({
       status: 'success',
@@ -73,27 +76,31 @@ class PlaylistsHandler {
   }
 
   async getSongsFromPlaylistHandler(request) {
-    const { playlistId } = request.params;
+    const { id: playlistId } = request.params;
     const { id: credentialId } = request.auth.credentials;
 
     await this._service.verifyPlaylistAccess(playlistId, credentialId);
-    const songs = await this._service.getSongsFromPlaylist(playlistId);
+
+    const playlist = await this._service.getSongsFromPlaylist(playlistId);
 
     return {
       status: 'success',
       data: {
-        songs,
+        playlist,
       },
     };
   }
 
   async deleteSongFromPlaylistHandler(request) {
-    const { playlistId } = request.params;
+    this._validator.validateDeleteSongPlaylistPayload(request.payload);
     const { songId } = request.payload;
+
+    const { id: playlistId } = request.params;
     const { id: credentialId } = request.auth.credentials;
 
+    await this._service.verifySongId(songId);
     await this._service.verifyPlaylistAccess(playlistId, credentialId);
-    await this._service.deleteSongFromPlaylist(playlistId, songId);
+    await this._service.deleteSongFromPlaylistById(playlistId, songId);
 
     return {
       status: 'success',

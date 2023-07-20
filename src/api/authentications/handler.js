@@ -14,7 +14,9 @@ class AuthenticationsHandler {
     this._validator.validatePostAuthenticationPayload(request.payload);
 
     // request.payload contains username and password
-    const id = await this._usersService.verifyUserCredential(request.payload);
+    const id = await this._usersService.verifyUserCredential(
+      request.payload,
+    );
 
     const accessToken = this._tokenManager.generateAccessToken({ id });
     const refreshToken = this._tokenManager.generateRefreshToken({ id });
@@ -37,11 +39,12 @@ class AuthenticationsHandler {
   async putAuthenticationHandler(request) {
     this._validator.validatePutAuthenticationPayload(request.payload);
 
-    await this._authenticationsService.verifyRefreshToken(request.payload);
-    const { id } = this._tokenManager.verifyRefreshToken(request.payload);
+    const { refreshToken } = request.payload;
+    // request.payload contains refreshToken
+    await this._authenticationsService.verifyRefreshToken(refreshToken);
+    const { id } = this._tokenManager.verifyRefreshToken(refreshToken);
 
     const accessToken = this._tokenManager.generateAccessToken({ id });
-
     return {
       status: 'success',
       message: 'Access Token berhasil diperbarui',
@@ -54,8 +57,11 @@ class AuthenticationsHandler {
   async deleteAuthenticationHandler(request) {
     this._validator.validateDeleteAuthenticationPayload(request.payload);
 
-    await this._authenticationsService.verifyRefreshToken(request.payload);
-    await this._authenticationsService.deleteRefreshToken(request.payload);
+    const { refreshToken } = request.payload;
+    await this._authenticationsService.verifyRefreshToken(refreshToken);
+
+    await this._authenticationsService.verifyRefreshToken(refreshToken);
+    await this._authenticationsService.deleteRefreshToken(refreshToken);
 
     return {
       status: 'success',
