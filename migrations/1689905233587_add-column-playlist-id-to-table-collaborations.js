@@ -1,14 +1,13 @@
 /* eslint-disable camelcase */
 
 exports.up = (pgm) => {
-  pgm.createTable('collaborations', {
-    id: {
+  pgm.addColumn('collaborations', {
+    playlist_id: {
       type: 'VARCHAR(50)',
-      primaryKey: true,
     },
   });
 };
 
 exports.down = (pgm) => {
-  pgm.dropTable('collaborations');
+  pgm.dropColumn('collaborations', 'playlist_id');
 };
