@@ -31,7 +31,7 @@ class PlaylistsService {
 
   async getPlaylists(owner) {
     const query = {
-      text: 'SELECT id, name, owner as username FROM playlists WHERE owner = $1',
+      text: 'SELECT playlists.id, playlists.name, users.username FROM playlists LEFT JOIN users ON users.id = playlists.owner LEFT JOIN collaborations ON collaborations.playlist_id = playlists.id WHERE playlists.owner = $1 OR collaborations.user_id = $1 GROUP BY playlists.id, users.username',
       values: [owner],
     };
 
@@ -65,13 +65,12 @@ class PlaylistsService {
       if (error instanceof NotFoundError) {
         throw error;
       }
-      if (error instanceof AuthorizationError) {
+      try {
+        await this._collaborationsService.verifyCollaborator(playlistId, userId);
+      } catch {
         throw error;
       }
     }
-
-    /* TODO: for collaboration feature
-    (if needed) then implement try catch here for verify playlist collaborator */
   }
 
   async deletePlaylistById(id) {
@@ -97,6 +96,19 @@ class PlaylistsService {
 
     if (!result.rowCount) {
       throw new NotFoundError('Lagu tidak ditemukan');
+    }
+  }
+
+  async verifyUserExist(userId) {
+    const query = {
+      text: 'SELECT id FROM users WHERE id = $1',
+      values: [userId],
+    };
+
+    const result = await this._pool.query(query);
+
+    if (!result.rowCount) {
+      throw new NotFoundError('User tidak ditemukan');
     }
   }
 
