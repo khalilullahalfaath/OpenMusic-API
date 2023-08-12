@@ -5,8 +5,9 @@ const { mapAlbumDBToModel, mapSongAlbumIdDBToModel } = require('../../utils');
 const NotFoundError = require('../../exceptions/NotFoundError');
 
 class AlbumService {
-  constructor() {
+  constructor(cacheService) {
     this._pool = new Pool();
+    this._cacheService = cacheService;
   }
 
   async addAlbum({ name, year }) {
@@ -113,7 +114,7 @@ class AlbumService {
     }
 
     const query = {
-      text: 'INSERT INTO user_album_likes VALUES($1, $2, $3, $4)',
+      text: 'INSERT INTO user_album_likes VALUES($1, $2, $3, $4) RETURNING id',
       values: [id, createdAt, userId, albumId],
     };
 
@@ -122,6 +123,10 @@ class AlbumService {
     if (!result.rowCount) {
       throw new NotFoundError('Gagal menyukai album. Id tidak ditemukan');
     }
+
+    await this._cacheService.delete(`albumLikes:${albumId}`);
+
+    return result.rows[0].id;
   }
 
   async checkAlbumLike(albumId, userId) {
@@ -150,18 +155,37 @@ class AlbumService {
     if (!result.rowCount) {
       throw new NotFoundError('Gagal menghapus like album. Id tidak ditemukan');
     }
+
+    await this._cacheService.delete(`albumLikes:${albumId}`);
   }
 
   async getAlbumLikesCount(albumId) {
-    const query = {
-      text: 'SELECT COUNT(*) FROM user_album_likes WHERE album_id = $1',
-      values: [albumId],
-    };
+    try {
+      // mengambil likes dari cache
+      const result = await this._cacheService.get(`albumLikes:${albumId}`);
+      return {
+        likes: JSON.parse(result),
+        isCache: true,
+      };
+    } catch (error) {
+      // mengambil likes dari database
+      const query = {
+        text: 'SELECT COUNT(*) FROM user_album_likes WHERE album_id = $1',
+        values: [albumId],
+      };
 
-    const result = await this._pool.query(query);
+      const result = await this._pool.query(query);
 
-    // change to integer
-    return parseInt(result.rows[0].count, 10);
+      const likesCount = parseInt(result.rows[0].count, 10);
+
+      // menyimpan likes dari database ke cache
+      await this._cacheService.set(`albumLikes:${albumId}`, likesCount);
+
+      return {
+        likes: likesCount,
+        isCache: false,
+      };
+    }
   }
 }
 

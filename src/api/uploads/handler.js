@@ -1,4 +1,5 @@
 const autoBind = require('auto-bind');
+const config = require('../../utils/config');
 
 class UploadsHandler {
   constructor(service, albumsService, validator) {
@@ -16,13 +17,13 @@ class UploadsHandler {
     this._validator.validateImageHeaders(cover.hapi.headers);
 
     const filename = await this._service.writeFile(cover, cover.hapi);
-    await this._albumsService.updateCover(albumId, `http://${process.env.HOST}:${process.env.PORT}/upload/images/${filename}`);
+    await this._albumsService.updateCover(albumId, `http://${config.app.host}:${config.app.port}/upload/images/${filename}`);
 
     const response = h.response({
       status: 'success',
       message: 'Sampul berhasil diunggah',
       data: {
-        coverUrl: `http://${process.env.HOST}:${process.env.PORT}/upload/images/${filename}`,
+        coverUrl: `http://${config.app.host}:${config.app.port}/upload/images/${filename}`,
       },
     });
 
